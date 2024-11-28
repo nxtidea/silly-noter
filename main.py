@@ -1,8 +1,19 @@
 import json
 import os
+import re
 from datetime import datetime
 
 import streamlit as st
+
+# ============================
+# 你负责的文件是：
+your_splited_filename = "0-2000.json"
+# ============================
+raw_data_dir = os.path.join(os.path.dirname(__file__), "raw", "test1")
+image_dir = os.path.join(raw_data_dir, "images")
+splited_dir = os.path.join(os.path.dirname(__file__), "splited")
+output_dir = os.path.join(os.path.dirname(__file__), "output")
+# ============================
 
 
 # 加载 JSON 数据
@@ -14,6 +25,13 @@ def load_data(file_path):
     except Exception as e:
         st.error(f"加载数据失败: {e}")
         return []
+
+
+def get_task_name(item):
+    if "-" in item["id"]:
+        return "picture"
+    else:
+        return "dialog"
 
 
 # 加载结果文件数据
@@ -38,11 +56,7 @@ def save_results(data, results_file_path):
 
 # 恢复进度
 def get_starting_index(data, results):
-    annotated_ids = {item["id"] for item in results}
-    for index, item in enumerate(data):
-        if item["id"] not in annotated_ids:
-            return index
-    return len(data)  # 如果所有数据都已标注，返回数据长度
+    return len(results)
 
 
 # 主程序
@@ -50,8 +64,8 @@ def main():
     st.set_page_config(page_title="图片数据标注工具", layout="wide")
 
     # 配置文件路径
-    json_file_path = "./train/d-with-taskname.json"  # 原始数据文件路径
-    results_file_path = "./output/results.json"  # 结果文件路径
+    json_file_path = os.path.join(splited_dir, your_splited_filename)  # 原始数据文件路径
+    results_file_path = os.path.join(output_dir, "marked_" + your_splited_filename)  # 结果文件路径
 
     # 加载原始数据
     data = load_data(json_file_path)
@@ -82,15 +96,16 @@ def main():
     item_id = item.get("id", "未知ID")
     images = item.get("image", [])
     instruction = item.get("instruction", "无说明")
-    task_name = item.get("task_name", "未知任务名称")
+    task_name = get_task_name(item)
 
     # 布局：图片和选项左右排列，图片下方显示 instruction
     cols = st.columns([1, 1, 1])  # 三列布局
 
     with cols[0]:  # 左侧显示图片和 instruction
         if images:
-            with open(f"./train/images/{images[0]}", "rb") as img_file:
-                st.image(img_file.read(), caption=f"数据 ID: {item_id}", width=300)
+            for image in images:
+                with open(os.path.join(image_dir, image), "rb") as img_file:
+                    st.image(img_file.read(), caption=f"数据 ID: {item_id}", width=300)
         else:
             st.error(f"数据 ID {item_id} 缺少图片！")
             st.session_state.current_index += 1
@@ -98,7 +113,31 @@ def main():
 
     with cols[1]:  # 中间显示 instruction
         st.markdown("### 说明")
-        st.text(instruction)
+        if task_name == "dialog":
+            # 正则提取 <用户与客服的对话 START> 和 <用户与客服的对话 END> 之间的内容
+            match = re.search(r"<用户与客服的对话 START>(.*?)<用户与客服的对话 END>", instruction, re.S)
+
+            # 如果匹配到内容，提取用户与客服对话
+            if match:
+                conversation = match.group(1).strip()
+                # conversation = conversation.replace("\n", "\n\n")
+                conversation_lines = conversation.split("\n")
+                # 隔行显示不同颜色对话内容
+                for line in conversation_lines:
+                    if line.startswith("用户"):
+                        st.markdown(f"**{line}**", unsafe_allow_html=True)
+                    elif line.startswith("客服"):
+                        st.markdown(f"*{line}*", unsafe_allow_html=True)
+                    else:
+                        st.text(line)
+            else:
+                conversation = "未找到对话内容"
+            st.text(conversation)
+        elif task_name == "picture":
+            st.text(instruction)
+        else:
+            st.error(f"未知任务名称: {task_name}")
+            return
 
     with cols[2]:  # 右侧显示选项
         st.markdown("### 请选择标注：")
@@ -159,15 +198,16 @@ def main():
 
         # 获取当前数据的 output，并设置默认选中项
         current_output = item.get("output", None)
-        default_index = (
-            intend_choices.index(current_output) if current_output in intend_choices else len(intend_choices) - 1
-        )
 
         if task_name == "dialog":
+            default_index = (
+                intend_choices.index(current_output) if current_output in intend_choices else len(intend_choices) - 1
+            )
             choice = st.radio(
                 "对话意图分类标注选项", intend_choices, index=default_index, key=f"choice_{current_index}"
             )
         elif task_name == "picture":
+            default_index = pic_choices.index(current_output) if current_output in pic_choices else len(pic_choices) - 1
             choice = st.radio("图片分类标注选项", pic_choices, index=default_index, key=f"choice_{current_index}")
         else:
             st.error(f"未知任务名称: {task_name}")
@@ -176,9 +216,10 @@ def main():
         if st.button("提交标注"):
             # 保存当前标注结果
             if choice and choice != "跳过":
-                results.append({"id": item_id, "output": choice})
-                save_results(results, results_file_path)
-
+                results.append({"number": current_index + 1, "id": item_id, "output": choice})
+            elif choice == "跳过":
+                results.append({"number": current_index + 1, "id": item_id, "output": ""})
+            save_results(results, results_file_path)
             # 更新索引并刷新页面
             st.session_state.current_index += 1
             st.rerun()
