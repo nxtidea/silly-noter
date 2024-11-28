@@ -17,9 +17,14 @@ else:
 # your_splited_filename = "0-2000.json"
 # ============================
 raw_data_dir = os.path.join(os.path.dirname(__file__), "raw", "test1")
+
 image_dir = os.path.join(raw_data_dir, "images")
 splited_dir = os.path.join(os.path.dirname(__file__), "splited")
+if not os.path.exists(splited_dir):
+    os.makedirs(splited_dir)
 output_dir = os.path.join(os.path.dirname(__file__), "output")
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 # ============================
 
 
