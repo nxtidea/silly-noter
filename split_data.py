@@ -3,6 +3,8 @@ import os
 
 raw_data_file = os.path.join(os.path.dirname(__file__), "raw", "test1", "test1.json")
 splited_data_dir = os.path.join(os.path.dirname(__file__), "splited")
+if not os.path.exists(splited_data_dir):
+    os.makedirs(splited_data_dir)
 
 print("Using raw data file:", raw_data_file)
 print("Splited data dir:", splited_data_dir)
