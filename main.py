@@ -1,13 +1,20 @@
 import json
 import os
 import re
+import sys
 from datetime import datetime
 
 import streamlit as st
 
+if len(sys.argv) > 1:
+    your_splited_filename = sys.argv[1]
+else:
+    st.error("请在启动命令中指定要标注的文件名！")
+    sys.exit(1)
+
 # ============================
 # 你负责的文件是：
-your_splited_filename = "0-2000.json"
+# your_splited_filename = "0-2000.json"
 # ============================
 raw_data_dir = os.path.join(os.path.dirname(__file__), "raw", "test1")
 image_dir = os.path.join(raw_data_dir, "images")

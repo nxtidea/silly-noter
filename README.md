@@ -1,12 +1,15 @@
 # Silly Noter
 为比赛开发的简单数据标注工具，以力破巧。
+- 自动保存结果和进度，下次打开时可以继续标注
+- 如果标错了，直接去修改`output`目录下`marked_`开头的json文件即可
+- 建议使用大点的或高分辨率屏幕进行标注
 
 ## 使用方法
 
 ### 下载本项目并安装依赖（实际仅依赖streamlit）：
 
 ```
-git clone https://github.com/gavinzhou/silly-noter.git
+git clone https://github.com/nxtidea/silly-noter.git
 cd silly-noter
 pip install -r requirements.txt
 ```
@@ -29,14 +32,10 @@ python split_data.py
 
 ### 运行标注工具
 
-1. 选择要标注的部分数据集，在`main.py`开头的地方修改`your_splited_filename`变量，例如：
-
-```python
-your_splited_filename = "0-2000.json"
-```
-
-2. 在终端运行下面命令，启动标注工具：
+在终端运行下面命令，启动标注工具：
 
 ```
-streamlit run main.py
+streamlit run main.py 0-2000.json
 ```
+
+其中`0-2000.json`是要标注的数据集名称，可以用`splited`目录下的文件名来指定。
